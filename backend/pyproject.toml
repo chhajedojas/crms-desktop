@@ -58,7 +58,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["app", "api", "core", "database", "services", "models", "extractors", "classifiers", "utils", "scanner", "extractor", "classifier", "pipeline", "validation", "analytics", "plugins"]
+packages = ["core", "scanner", "extractor", "classifier", "pipeline", "validation", "database", "plugins"]
 
 [tool.black]
 line-length = 100

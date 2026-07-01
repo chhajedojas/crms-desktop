@@ -3,12 +3,41 @@ Core configuration management for CRMS backend.
 Handles environment variables, application settings, and configuration validation.
 """
 
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def get_default_tesseract_path() -> str:
+    """Get platform-specific default Tesseract path.
+
+    Returns:
+        Default path for Tesseract executable
+    """
+    if sys.platform == "win32":
+        return "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+    elif sys.platform == "darwin":
+        return "/usr/local/bin/tesseract"
+    else:  # Linux
+        return "/usr/bin/tesseract"
+
+
+def get_default_tessdata_path() -> str:
+    """Get platform-specific default Tesseract data path.
+
+    Returns:
+        Default path for Tesseract data files
+    """
+    if sys.platform == "win32":
+        return "C:\\Program Files\\Tesseract-OCR\\tessdata"
+    elif sys.platform == "darwin":
+        return "/usr/local/share/tessdata"
+    else:  # Linux
+        return "/usr/share/tesseract-ocr/4.00/tessdata"
 
 
 class DatabaseConfig(BaseSettings):
@@ -26,11 +55,11 @@ class DatabaseConfig(BaseSettings):
 
     @field_validator("database_path", "database_backup_path", "duckdb_path")
     @classmethod
-    def ensure_path_exists(cls, v: str) -> str:
-        """Ensure directory exists for database paths."""
-        path = Path(v)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return str(path)
+    def validate_path(cls, v: str) -> str:
+        """Validate database path string."""
+        if not v:
+            raise ValueError("Database path cannot be empty")
+        return str(Path(v).expanduser().resolve())
 
 
 class IPCConfig(BaseSettings):
@@ -70,10 +99,10 @@ class OCRConfig(BaseSettings):
     ocr_enabled: bool = Field(default=True, description="Enable OCR processing")
     ocr_language: str = Field(default="eng", description="OCR language code")
     ocr_tesseract_path: str = Field(
-        default="/usr/local/bin/tesseract", description="Path to Tesseract executable"
+        default_factory=get_default_tesseract_path, description="Path to Tesseract executable"
     )
     ocr_tessdata_path: str = Field(
-        default="/usr/local/share/tessdata", description="Path to Tesseract data"
+        default_factory=get_default_tessdata_path, description="Path to Tesseract data"
     )
     ocr_dpi: int = Field(default=300, description="DPI for OCR processing")
 

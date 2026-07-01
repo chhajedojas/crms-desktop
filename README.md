@@ -1,70 +1,297 @@
 # CRMS - AI-Powered Document Intelligence Platform
 
-An offline AI-powered document intelligence platform for Indian businesses. CRMS helps you find, classify, audit, and understand your business documents with confidence-scored extraction, relationship mapping, and smart reorganization.
+<div align="center">
 
-## Vision
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Python](https://img.shields.io/badge/python-3.11+-green)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-foundation-yellow)
 
-> Transform chaotic document repositories into intelligent, searchable, and auditable business intelligence systems—completely offline.
+**An offline AI-powered document intelligence platform for Indian businesses**
 
-## Core Capabilities
+[Features](#features) • [Installation](#installation) • [Documentation](#documentation) • [Contributing](#contributing)
 
-- **Document Intelligence**: AI-powered extraction with confidence scores
+</div>
+
+---
+
+## Overview
+
+CRMS (Company Records Management System) transforms chaotic document repositories into intelligent, searchable, and auditable business intelligence systems—completely offline. Designed for Indian businesses, it handles invoices, delivery challans, bank statements, GST documents, and more with confidence-scored extraction, relationship mapping, and smart reorganization.
+
+![Screenshot Placeholder](#screenshots)
+
+## Features
+
+### Document Intelligence
+- **AI-Powered Extraction**: Extract metadata with confidence scores
+- **OCR Support**: Process scanned documents and images
+- **Multi-Format Support**: PDF, Excel, Word, Images, and more
+- **Classification**: Automatic document type classification
+
+### Business Intelligence
 - **Relationship Mapping**: Link invoices ↔ delivery challans ↔ payments ↔ ledgers
 - **GST Validation**: Automated GST compliance checking
 - **Sequence Detection**: Identify missing invoice numbers and gaps
 - **Bank Reconciliation**: Match bank statements with payments
+- **Duplicate Detection**: Find duplicate invoices and payments
+
+### Organization
 - **Smart Reorganization**: Professional folder structures with undo support
+- **Migration Plans**: Generate document reorganization plans
+- **Undo System**: Complete rollback capability for all operations
+
+### Search & Analytics
 - **Full-Text Search**: Instant search across 4000+ documents in <100ms
+- **FTS5 Integration**: SQLite FTS5 for fast full-text search
+- **Dashboard**: Visual analytics and business insights
+- **Reports**: Generate Excel reports for audits and analysis
+
+### Audit & Compliance
 - **Audit Trail**: Complete tamper-evident logging of all operations
+- **Non-Destructive**: Original documents never modified
+- **Offline-First**: Complete offline operation, no internet required
 
-## Processing Pipeline
+## Technology Stack
 
-All document processing follows this sequential pipeline:
+### Backend
+- **Python 3.11+** with type hints
+- **SQLite** with FTS5 for full-text search
+- **DuckDB** for analytical queries (v0.5)
+- **Pydantic** for configuration management
+- **Loguru** for structured logging
+- **Celery** for job queue processing
+
+### Frontend
+- **React 18** with TypeScript
+- **Electron** for desktop application
+- **Vite** for build tooling
+- **Redux Toolkit** for state management
+
+### Document Processing
+- **Tesseract OCR** for text extraction
+- **PyPDF2, pdfplumber** for PDF processing
+- **openpyxl, pandas** for Excel processing
+- **python-docx** for Word processing
+
+For complete technology details, see [TECH_STACK.md](TECH_STACK.md).
+
+## Architecture
+
+CRMS follows a modular architecture with clear separation of concerns:
 
 ```
-Select Folder
-       ↓
-    Scanner
-   (Detect new/modified/deleted files)
-       ↓
-  Hash Generator
-   (SHA-256 for deduplication)
-       ↓
-Metadata Extraction
-   (With confidence scores)
-       ↓
-      OCR
-   (If text extraction fails)
-       ↓
-  Classification
-   (Document type + confidence)
-       ↓
-    SQLite
-   (Operational database)
-       ↓
- DuckDB Analytics
-   (Complex queries + reports)
-       ↓
-  Search Index
-   (FTS5 full-text search)
-       ↓
-    Reports
-   (Excel generation)
-       ↓
-  Dashboard
-   (Visualization + UI)
+┌─────────────────────────────────────────────────────────┐
+│                    Electron Frontend                     │
+│              (React + TypeScript + Vite)                 │
+└────────────────────┬────────────────────────────────────┘
+                     │ IPC (stdin/stdout)
+┌────────────────────┴────────────────────────────────────┐
+│                    Python Backend                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Scanner    │  │  Extractor   │  │ Classifier   │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Search     │  │ Validation   │  │  Pipeline    │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │              SQLite + FTS5                        │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Key Pipeline Features:**
-- **Incremental Processing**: Only reprocess changed files
-- **Job Queue**: Resumable processing with retry logic
-- **Progress Tracking**: Real-time progress updates for long operations
-- **Error Recovery**: Failed jobs are retried with exponential backoff
-- **Confidence Scoring**: All extracted data includes 0.0-1.0 confidence
+For detailed architecture, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Installation
+
+### Prerequisites
+
+- **Python 3.11+**
+- **Node.js 18+**
+- **Git**
+- **Tesseract OCR** (system package)
+
+#### Installing Tesseract OCR
+
+**macOS:**
+```bash
+brew install tesseract tesseract-lang
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install tesseract-ocr tesseract-ocr-eng
+```
+
+**Windows:**
+Download from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/chhajedojas/crms-ai-document-intelligence.git
+   cd crms-ai-document-intelligence
+   ```
+
+2. **Backend setup**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   python scripts/init_db.py
+   ```
+
+3. **Frontend setup**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+4. **Configure environment**
+   ```bash
+   # Backend
+   cd backend
+   cp .env.example .env
+   # Edit .env with your settings
+
+   # Frontend
+   cd ../frontend
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
+
+## Development
+
+### Running the Application
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+source venv/bin/activate
+python main.py
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+### Testing
+
+**Backend tests:**
+```bash
+cd backend
+pytest tests/ -v --cov
+```
+
+**Frontend tests:**
+```bash
+cd frontend
+npm test
+```
+
+### Code Quality
+
+**Backend:**
+```bash
+cd backend
+black .      # Format code
+flake8 .     # Lint code
+mypy core/    # Type checking
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run lint    # Lint code
+npm run format  # Format code
+```
+
+## Project Structure
+
+```
+crms/
+├── backend/              # Python backend
+│   ├── core/           # Configuration, constants, base classes
+│   ├── scanner/        # Document scanning and change detection
+│   ├── extractor/      # Metadata extraction
+│   ├── classifier/     # Document classification
+│   ├── database/       # SQLite schema and migrations
+│   ├── pipeline/       # Job queue and processing
+│   ├── validation/     # GST validation, sequence detection
+│   ├── tests/          # Unit and integration tests
+│   └── scripts/        # Utility scripts
+├── frontend/           # React + Electron frontend
+│   ├── electron/       # Electron main process
+│   ├── src/            # React components and logic
+│   ├── tests/          # Component tests
+│   └── public/         # Static assets
+├── samples/            # Sample documents for testing
+├── docs/               # Documentation
+└── .github/            # CI/CD workflows
+```
+
+For detailed structure, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
+
+## Documentation
+
+- [Architecture](ARCHITECTURE.md) - System architecture and design decisions
+- [Technology Stack](TECH_STACK.md) - Complete technology overview
+- [Database Schema](DATABASE_SCHEMA.sql) - Database schema
+- [Roadmap](ROADMAP.md) - Development roadmap
+- [Changelog](CHANGELOG.md) - Version history
+- [Contributing](CONTRIBUTING.md) - Contribution guidelines
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
+- [Security](SECURITY.md) - Security policy
+- [Development Status](DEVELOPMENT_STATUS.md) - Current development status
+- [Architectural Decisions](DECISIONS.md) - ADR documentation
+
+## Roadmap
+
+### v0.1 - Foundation ✅
+- Architecture and configuration
+- Database schema
+- Testing infrastructure
+- Code quality tools
+
+### v0.2 - Intelligence (Next)
+- Document scanner with change detection
+- Metadata extraction (PDF, Excel, Word)
+- OCR integration
+- Basic classification
+- FTS5 search implementation
+
+### v0.3 - Organization
+- Reorganization engine
+- Undo system
+- Plugin system
+- Migration plan generation
+
+### v0.4 - Validation
+- GST validation
+- Sequence detection
+- Relationship graph
+- Bank reconciliation
+
+### v0.5 - Analytics
+- DuckDB integration
+- Customer/vendor timelines
+- Dashboard UI
+- Advanced reports
+
+### v1.0 - Platform
+- ML-based classification
+- Production packaging
+- Complete documentation
+
+See [ROADMAP.md](ROADMAP.md) for details.
 
 ## Engineering Rules
 
-### Core Principles (Never Violate)
+CRMS follows strict engineering principles:
 
 - **Never modify original documents** - All operations work on copies
 - **All reorganization must be undoable** - Every operation must have rollback
@@ -77,261 +304,53 @@ Metadata Extraction
 - **All file operations must be atomic** - Write to temp, then rename
 - **Never log sensitive data** - No passwords, API keys, or personal info in logs
 
-### Code Quality Standards
+## Performance Targets
 
-- **Type Safety**: All Python code must pass mypy strict mode
-- **Formatting**: Use Black for Python, Prettier for TypeScript
-- **Linting**: Pass flake8 (Python) and ESLint (TypeScript)
-- **Documentation**: Every public function must have docstrings
-- **Error Handling**: Never silently catch exceptions - log and handle
-- **Resource Management**: Use context managers for file/database operations
-- **Thread Safety**: All shared state must be thread-safe
-- **Memory Efficiency**: Stream large files, never load entirely into memory
-
-### AI/ML Guidelines
-
-- **Never hallucinate document data** - Only extract what exists in the document
-- **Always return source document** - Every AI answer must cite the source
-- **Show confidence scores** - All AI outputs must include confidence levels
-- **Explain matching logic** - Search results must explain why they matched
-- **Keep all AI processing offline** - No external API calls for AI features
-- **Manual review threshold** - Confidence < 0.7 requires human review
-- **Training data versioning** - All ML models must be versioned
-
-### Performance Targets
-
-- **Scanning**: 5,000 files in under 3 minutes
-- **Search Latency**: < 100ms for typical queries
-- **Memory Usage**: < 1 GB during normal operation
-- **Startup Time**: < 5 seconds to ready state
-- **Reorganization**: 1,000 files in under 2 minutes
-- **Report Generation**: < 30 seconds for standard reports
-- **Database Size**: < 500 MB for 10,000 documents
-
-### Error Handling Standards
-
-- **Corrupted PDFs**: Log error, skip file, continue processing
-- **Password-protected Excel**: Prompt user for password, skip if cancelled
-- **Missing Permissions**: Log error, show user-friendly message, skip
-- **Duplicate Filenames**: Append timestamp, preserve both files
-- **Low OCR Confidence**: Flag for manual review, don't auto-classify
-- **Database Locks**: Retry with exponential backoff, timeout after 30s
-- **Disk Space Full**: Stop operation, show error, cleanup temp files
-- **Network Errors**: (Should not occur - offline-first) Log as critical
-
-## Repository Structure
-
-```
-crms/
-├── backend/
-│   ├── core/              # Configuration, constants, base classes
-│   ├── scanner/           # Document scanning and change detection
-│   ├── extractor/         # Metadata extraction (PDF, Excel, Word, Images)
-│   ├── classifier/        # Document classification (rule-based + ML)
-│   ├── search/            # FTS5 search implementation
-│   ├── reports/           # Report generation (Excel, PDF)
-│   ├── reorganization/   # Folder structure and reorganization
-│   ├── database/          # SQLite schema, migrations, connection pool
-│   ├── pipeline/          # Job queue, processing pipeline
-│   ├── validation/        # GST validation, sequence detection
-│   ├── analytics/         # DuckDB integration, relationship graph
-│   ├── plugins/           # Plugin system and built-in plugins
-│   ├── tests/             # Unit tests, integration tests
-│   └── scripts/           # Utility scripts (init_db, migrations)
-│
-├── frontend/
-│   ├── electron/          # Electron main process, IPC handlers
-│   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── pages/         # Page-level components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── store/         # Redux store, API slices
-│   │   ├── services/      # API client, business logic
-│   │   ├── types/         # TypeScript type definitions
-│   │   └── utils/         # Utility functions
-│   ├── tests/             # Component tests, E2E tests
-│   └── public/            # Static assets, icons
-│
-├── shared/                # Shared types, constants between frontend/backend
-├── docs/                  # Documentation
-├── build/                 # Build scripts, resources
-└── .github/               # CI/CD workflows
-```
-
-## Development Workflow
-
-### Getting Started
-
-1. **Prerequisites**
-   - Python 3.11+
-   - Node.js 18+
-   - Tesseract OCR (system package)
-
-2. **Setup**
-   ```bash
-   # Clone repository
-   git clone <repository-url>
-   cd crms
-
-   # Backend setup
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   python scripts/init_db.py
-
-   # Frontend setup
-   cd ../frontend
-   npm install
-   ```
-
-3. **Development**
-   ```bash
-   # Terminal 1: Backend
-   cd backend
-   python main.py
-
-   # Terminal 2: Frontend
-   cd frontend
-   npm run dev
-   ```
-
-### Testing
-
-```bash
-# Backend tests
-cd backend
-pytest tests/ -v --cov
-
-# Frontend tests
-cd frontend
-npm test
-
-# Full test suite
-npm run test:all
-```
-
-### Code Quality
-
-```bash
-# Backend linting
-cd backend
-black .
-flake8 .
-mypy .
-
-# Frontend linting
-cd frontend
-npm run lint
-npm run format
-```
-
-## Release Roadmap
-
-### v0.1 - Foundation (Current Sprint)
-**Goal**: Basic scanning and inventory
-- ✅ Architecture design
-- ✅ Database schema
-- ✅ Project structure
-- ✅ Python backend configuration (pyproject.toml, requirements.txt)
-- ✅ Core modules (config, constants, exceptions, base classes, logging)
-- ✅ Database connection management (SQLite with optional DuckDB)
-- ✅ Testing framework configuration (pytest, coverage)
-- ✅ Linting and formatting (black, flake8, mypy, isort)
-- ✅ Pre-commit hooks configuration
-- ✅ TypeScript and React configuration
-- ✅ Placeholder modules for scanner, extractor, classifier, pipeline, validation
-- 🔄 Document scanner implementation
-- 🔄 Hash generator implementation
-- 🔄 Metadata extraction implementation
-- 🔄 OCR integration
-- 🔄 Classification implementation
-- 🔄 Search indexing
-- 🔄 Inventory report generation
-
-### v0.2 - Intelligence
-**Goal**: Metadata extraction and search
-- Metadata extraction (PDF, Excel, Word)
-- OCR integration
-- Basic classification
-- FTS5 search
-- Search UI
-
-### v0.3 - Organization
-**Goal**: Reorganization and undo
-- Folder structure suggestions
-- Reorganization engine
-- Undo system
-- Migration plan generation
-
-### v0.4 - Validation
-**Goal**: Business intelligence features
-- GST validation
-- Sequence detection
-- Duplicate invoice detection
-- Relationship graph
-- Bank reconciliation helper
-
-### v0.5 - Analytics
-**Goal**: Advanced reporting and dashboard
-- DuckDB integration
-- Customer timelines
-- Vendor timelines
-- Dashboard UI
-- Advanced reports
-
-### v1.0 - Platform
-**Goal**: Complete AI-powered platform
-- ML-based classification
-- Plugin system
-- Advanced AI features
-- Complete documentation
-- Production installer
-
-## Performance Benchmarks
-
-Current targets for typical workload (5,000 documents):
-
-| Operation | Target | Actual |
+| Operation | Target | Status |
 |-----------|--------|--------|
-| Initial Scan | < 3 min | TBD |
-| Incremental Rescan | < 30 sec | TBD |
-| Search Query | < 100 ms | TBD |
-| Reorganization | < 2 min | TBD |
-| Report Generation | < 30 sec | TBD |
-| Memory Usage | < 1 GB | TBD |
-
-## Documentation
-
-- [Architecture](ARCHITECTURE.md) - System architecture and design decisions
-- [Database Schema](DATABASE_SCHEMA.sql) - Complete database schema
-- [Project Structure](PROJECT_STRUCTURE.md) - Detailed folder structure
-- [Installation Guide](docs/INSTALLATION.md) - Installation instructions
-- [User Guide](docs/USER_GUIDE.md) - End-user documentation
-- [Developer Guide](docs/DEVELOPER_GUIDE.md) - Developer documentation
-- [API Documentation](docs/API_DOCUMENTATION.md) - IPC channel reference
-- [Testing Guide](docs/TESTING.md) - Testing strategy and guidelines
+| Initial Scan (5,000 files) | < 3 min | 📋 Planned |
+| Incremental Rescan | < 30 sec | 📋 Planned |
+| Search Query | < 100 ms | 📋 Planned |
+| Reorganization (1,000 files) | < 2 min | 📋 Planned |
+| Report Generation | < 30 sec | 📋 Planned |
+| Memory Usage | < 1 GB | 📋 Planned |
+| Startup Time | < 5 sec | 📋 Planned |
 
 ## Contributing
 
-Contributors must follow these rules:
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-1. **Read the architecture** - Understand the system before making changes
-2. **Write tests first** - TDD approach for all new features
-3. **Follow engineering rules** - Never violate core principles
-4. **Update documentation** - Keep docs in sync with code
-5. **Code review required** - All changes must be reviewed
-6. **Performance tested** - Verify performance targets are met
-7. **Security reviewed** - No security vulnerabilities introduced
+### Quick Start for Contributors
+
+1. Read [ARCHITECTURE.md](ARCHITECTURE.md) and [DECISIONS.md](DECISIONS.md)
+2. Fork the repository
+3. Create a feature branch
+4. Write tests for your changes
+5. Ensure all tests pass
+6. Submit a pull request
 
 ## License
 
-Proprietary - All rights reserved
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-For development support:
-- Architecture questions: Review ARCHITECTURE.md
-- Implementation questions: Review DEVELOPER_GUIDE.md
-- Bug reports: Create issue with detailed reproduction steps
-- Feature requests: Create issue with use case and requirements
+- **Documentation**: See the [docs/](docs/) directory
+- **Issues**: [GitHub Issues](https://github.com/chhajedojas/crms-ai-document-intelligence/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/chhajedojas/crms-ai-document-intelligence/discussions)
+
+## Acknowledgments
+
+- Built with [Python](https://www.python.org/), [React](https://reactjs.org/), and [Electron](https://www.electronjs.org/)
+- Document processing powered by [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+- Database powered by [SQLite](https://www.sqlite.org/) and [DuckDB](https://duckdb.org/)
+
+---
+
+<div align="center">
+
+**Built with ❤️ for Indian businesses**
+
+[⭐ Star](https://github.com/chhajedojas/crms-ai-document-intelligence/stargazers) • [🐛 Report Issue](https://github.com/chhajedojas/crms-ai-document-intelligence/issues) • [📖 Documentation](docs/)
+
+</div>

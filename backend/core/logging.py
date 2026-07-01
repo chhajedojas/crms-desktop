@@ -89,11 +89,15 @@ def setup_logging(
 
         logger.info(f"Logging configured: level={level}, path={log_dir}")
 
+    except OSError as e:
+        raise ConfigurationError(f"Failed to create log directory: {str(e)}")
+    except ValueError as e:
+        raise ConfigurationError(f"Invalid logging configuration: {str(e)}")
     except Exception as e:
         raise ConfigurationError(f"Failed to configure logging: {str(e)}")
 
 
-def get_logger(name: str) -> object:
+def get_logger(name: str):
     """
     Get a logger instance for a specific module.
 
