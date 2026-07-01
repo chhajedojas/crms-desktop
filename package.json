@@ -1,0 +1,92 @@
+{
+  "name": "crms",
+  "version": "1.0.0",
+  "description": "Company Records Management System - Intelligent document management for business documents",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && python main.py",
+    "dev:frontend": "cd frontend && vite",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && tsc && vite build",
+    "build:backend": "cd backend && python -m PyInstaller --onefile main.py",
+    "build:electron": "electron-builder",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win",
+    "preview": "cd frontend && vite preview",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "test": "pytest backend/tests/",
+    "test:frontend": "cd frontend && vitest",
+    "test:all": "npm run test && npm run test:frontend"
+  },
+  "keywords": [
+    "document-management",
+    "electron",
+    "react",
+    "python",
+    "ocr",
+    "business"
+  ],
+  "author": "CRMS Development Team",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.54.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.0",
+    "vite-plugin-electron": "^0.28.0",
+    "vitest": "^1.0.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@mui/material": "^5.14.0",
+    "@mui/icons-material": "^5.14.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@reduxjs/toolkit": "^2.0.0",
+    "react-redux": "^9.0.0"
+  },
+  "build": {
+    "appId": "com.crms.app",
+    "productName": "CRMS",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build/resources"
+    },
+    "files": [
+      "frontend/dist/**/*",
+      "backend/dist/**/*",
+      "shared/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/resources/icons/icon.icns"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/resources/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
