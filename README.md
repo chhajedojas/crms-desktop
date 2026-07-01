@@ -239,6 +239,8 @@ For detailed structure, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 ## Documentation
 
 - [Architecture](ARCHITECTURE.md) - System architecture and design decisions
+- [Architecture Review](ARCHITECTURE_REVIEW.md) - Comprehensive architecture review with diagrams
+- [Architecture Diagrams](docs/diagrams/) - Mermaid diagrams for system architecture
 - [Technology Stack](TECH_STACK.md) - Complete technology overview
 - [Database Schema](DATABASE_SCHEMA.sql) - Database schema
 - [Roadmap](ROADMAP.md) - Development roadmap
