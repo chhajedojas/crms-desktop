@@ -1,14 +1,18 @@
 """
 Database connection management for CRMS backend.
-Handles SQLite and DuckDB database connections.
+Handles SQLAlchemy ORM and SQLite database connections.
 """
 
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional, Any
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
 
 from core import DatabaseError, Settings, get_logger, get_settings
+from database.models import Base
 
 # Optional DuckDB import
 try:
@@ -20,7 +24,7 @@ except ImportError:
 
 
 class DatabaseConnection:
-    """Manages database connections for SQLite and DuckDB."""
+    """Manages database connections for SQLAlchemy ORM and SQLite."""
 
     def __init__(self, settings: Optional[Settings] = None):
         """Initialize database connection with optional settings.
@@ -30,6 +34,8 @@ class DatabaseConnection:
         """
         self.settings = settings or get_settings()
         self.logger = get_logger(__name__)
+        self._engine = None
+        self._session_factory = None
         self._sqlite_connection: Optional[sqlite3.Connection] = None
         self._duckdb_connection: Optional[Any] = None
 
@@ -71,6 +77,105 @@ class DatabaseConnection:
             )
 
         return resolved_path
+
+    def get_engine(self):
+        """
+        Get SQLAlchemy engine.
+
+        Returns:
+            SQLAlchemy engine
+
+        Raises:
+            DatabaseError: If engine creation fails
+        """
+        if self._engine is None:
+            try:
+                db_path = self._validate_path(Path(self.settings.database.database_path))
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+
+                db_url = f"sqlite:///{db_path}"
+                self._engine = create_engine(
+                    db_url,
+                    echo=False,
+                    connect_args={"check_same_thread": False},
+                    poolclass=StaticPool,
+                )
+                self.logger.info(f"SQLAlchemy engine created: {db_url}")
+            except Exception as e:
+                self.logger.error(f"Failed to create SQLAlchemy engine: {str(e)}", exc_info=True)
+                raise DatabaseError(f"Failed to create SQLAlchemy engine: {str(e)}")
+
+        return self._engine
+
+    def get_session_factory(self):
+        """
+        Get SQLAlchemy session factory.
+
+        Returns:
+            SQLAlchemy session factory
+        """
+        if self._session_factory is None:
+            engine = self.get_engine()
+            self._session_factory = sessionmaker(
+                bind=engine,
+                autocommit=False,
+                autoflush=False,
+            )
+            self.logger.info("SQLAlchemy session factory created")
+
+        return self._session_factory
+
+    @contextmanager
+    def get_session(self) -> Session:
+        """
+        Get SQLAlchemy session with context manager.
+
+        Yields:
+            SQLAlchemy session
+
+        Raises:
+            DatabaseError: If session creation fails
+        """
+        session_factory = self.get_session_factory()
+        session = session_factory()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def create_tables(self) -> None:
+        """
+        Create all tables from ORM models.
+
+        Raises:
+            DatabaseError: If table creation fails
+        """
+        try:
+            engine = self.get_engine()
+            Base.metadata.create_all(engine)
+            self.logger.info("All tables created from ORM models")
+        except Exception as e:
+            self.logger.error(f"Failed to create tables: {str(e)}", exc_info=True)
+            raise DatabaseError(f"Failed to create tables: {str(e)}")
+
+    def drop_tables(self) -> None:
+        """
+        Drop all tables from ORM models.
+
+        Raises:
+            DatabaseError: If table drop fails
+        """
+        try:
+            engine = self.get_engine()
+            Base.metadata.drop_all(engine)
+            self.logger.info("All tables dropped from ORM models")
+        except Exception as e:
+            self.logger.error(f"Failed to drop tables: {str(e)}", exc_info=True)
+            raise DatabaseError(f"Failed to drop tables: {str(e)}")
 
     @contextmanager
     def get_sqlite_connection(self) -> Any:

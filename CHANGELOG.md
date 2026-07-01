@@ -8,7 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- MIT License for open-source distribution
+- Scanner module for file discovery with parallel processing
+- SHA-256 hash generation using streaming (memory-efficient)
+- Recursive directory traversal with configurable filters
+- Include/exclude pattern support for file filtering
+- Hidden and system file filtering
+- Symbolic link loop detection
+- Progress tracking with callback support
+- Cancellation support for long-running scans
+- Scan state management for resume functionality
+- Worker pool for parallel file scanning
+- Path resolver with validation and normalization
+- Filter manager for pattern-based file filtering
+- File scanner for metadata collection
+- Unit tests for scanner components (47 tests)
+- SCANNER_DESIGN.md with architecture and performance analysis
+
+### Changed
+- Updated scanner package with comprehensive implementation
+- Added structured logging throughout scanner module
+- Implemented robust error handling with custom exceptions
+- Flake8 linting passing for scanner module
+- Black formatting applied to scanner module
+
+### Documentation
+- SCANNER_DESIGN.md with architecture, threading model, complexity analysis, performance analysis, and extension points
+- Updated scanner package exports
+
+### Testing
+- 47 scanner unit tests passing
+- Test coverage for hash generator, path resolver, filter manager, file scanner, progress tracker, and data structures
 
 ## [0.1.0] - 2024-01-01
 
