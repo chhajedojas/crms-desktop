@@ -5,9 +5,56 @@ Handles IPC communication with Electron frontend.
 
 import sys
 import asyncio
+from typing import Optional, Any
+from pydantic import BaseModel, Field, field_validator
 
 from core import setup_logging, get_logger, get_settings
 from database.connection import DatabaseConnection
+
+
+class IPCCommand(BaseModel):
+    """Pydantic model for IPC command validation."""
+
+    action: str = Field(..., description="Command action to execute")
+    data: Optional[dict] = Field(default_factory=dict, description="Command data")
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        """Validate action is not empty and reasonable length."""
+        if not v or not v.strip():
+            raise ValueError("Action cannot be empty")
+        if len(v) > 100:
+            raise ValueError("Action cannot exceed 100 characters")
+        return v.strip()
+
+    @field_validator("data")
+    @classmethod
+    def validate_data(cls, v: Optional[dict]) -> Optional[dict]:
+        """Validate data size and structure."""
+        if v is None:
+            return None
+        # Limit data size to prevent memory exhaustion
+        data_str = str(v)
+        if len(data_str) > 1_000_000:  # 1MB limit
+            raise ValueError("Data size exceeds 1MB limit")
+        return v
+
+
+class IPCResponse(BaseModel):
+    """Pydantic model for IPC response."""
+
+    success: bool = Field(..., description="Whether command succeeded")
+    message: str = Field(..., description="Response message")
+    data: Optional[Any] = Field(default=None, description="Response data")
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        """Validate message length."""
+        if len(v) > 1000:
+            raise ValueError("Message cannot exceed 1000 characters")
+        return v
 
 
 class IPCHandler:
@@ -29,60 +76,76 @@ class IPCHandler:
         Returns:
             Response dictionary with 'success', 'message', and 'data' keys
         """
-        action = command.get("action")
-        _ = command.get("data", {})
-
-        self.logger.info(f"Received IPC command: {action}")
-
         try:
+            # Validate command structure with Pydantic
+            validated_command = IPCCommand(**command)
+            action = validated_command.action
+
+            self.logger.info(f"Received IPC command: {action}")
+
             if action == "health_check":
-                return {
-                    "success": True,
-                    "message": "Backend is healthy",
-                    "data": {
+                response = IPCResponse(
+                    success=True,
+                    message="Backend is healthy",
+                    data={
                         "version": self.settings.app_version,
                         "environment": self.settings.environment,
                     },
-                }
+                )
+                return response.model_dump()
 
             elif action == "scan_directory":
                 # Placeholder for v0.2
-                return {
-                    "success": False,
-                    "message": "Scanner not yet implemented",
-                    "data": None,
-                }
+                response = IPCResponse(
+                    success=False,
+                    message="Scanner not yet implemented",
+                    data=None,
+                )
+                return response.model_dump()
 
             elif action == "extract_metadata":
                 # Placeholder for v0.2
-                return {
-                    "success": False,
-                    "message": "Metadata extraction not yet implemented",
-                    "data": None,
-                }
+                response = IPCResponse(
+                    success=False,
+                    message="Metadata extraction not yet implemented",
+                    data=None,
+                )
+                return response.model_dump()
 
             elif action == "search":
                 # Placeholder for v0.2
-                return {
-                    "success": False,
-                    "message": "Search not yet implemented",
-                    "data": None,
-                }
+                response = IPCResponse(
+                    success=False,
+                    message="Search not yet implemented",
+                    data=None,
+                )
+                return response.model_dump()
 
             else:
-                return {
-                    "success": False,
-                    "message": f"Unknown action: {action}",
-                    "data": None,
-                }
+                response = IPCResponse(
+                    success=False,
+                    message=f"Unknown action: {action}",
+                    data=None,
+                )
+                return response.model_dump()
 
+        except ValueError as e:
+            # Pydantic validation error
+            self.logger.warning(f"Invalid IPC command: {str(e)}")
+            response = IPCResponse(
+                success=False,
+                message="Invalid command format",
+                data=None,
+            )
+            return response.model_dump()
         except Exception as e:
-            self.logger.error(f"Error handling command {action}: {str(e)}", exc_info=True)
-            return {
-                "success": False,
-                "message": f"Error: {str(e)}",
-                "data": None,
-            }
+            self.logger.error(f"Error handling command: {str(e)}", exc_info=True)
+            response = IPCResponse(
+                success=False,
+                message="Internal server error",
+                data=None,
+            )
+            return response.model_dump()
 
     async def run(self):
         """Run the IPC handler loop."""

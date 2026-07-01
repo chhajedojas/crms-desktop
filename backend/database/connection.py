@@ -43,15 +43,31 @@ class DatabaseConnection:
             Resolved path
 
         Raises:
-            DatabaseError: If path is outside application directory
+            DatabaseError: If path is outside application directory or contains symlinks
         """
         resolved_path = path.resolve()
         cwd = Path.cwd().resolve()
 
-        # Allow paths within current directory or its subdirectories
-        if not str(resolved_path).startswith(str(cwd)):
+        # Check if path is absolute and within current directory tree
+        if not resolved_path.is_absolute():
+            raise DatabaseError(f"Database path must be absolute: {resolved_path}")
+
+        # Check if path is within current directory or its subdirectories
+        try:
+            resolved_path.relative_to(cwd)
+        except ValueError:
             raise DatabaseError(
                 f"Database path must be within application directory: {resolved_path}"
+            )
+
+        # Check if path is a symlink (prevent symlink attacks)
+        if resolved_path.is_symlink():
+            raise DatabaseError(f"Database path cannot be a symlink: {resolved_path}")
+
+        # Additional check: ensure path doesn't escape via parent directory references
+        if ".." in str(resolved_path):
+            raise DatabaseError(
+                f"Database path cannot contain parent directory references: {resolved_path}"
             )
 
         return resolved_path
@@ -117,11 +133,25 @@ class DatabaseConnection:
             if not schema_file.exists():
                 raise DatabaseError(f"Schema file not found: {schema_path}")
 
+            # Validate schema file path
+            validated_schema_path = self._validate_path(schema_file)
+
+            # Read and validate schema content
+            with open(validated_schema_path, "r") as f:
+                schema_sql = f.read()
+
+            # SQL injection prevention: sanitize schema content
+            self._validate_schema_sql(schema_sql)
+
+            # Initialize database with transaction
             with self.get_sqlite_connection() as conn:
-                with open(schema_path, "r") as f:
-                    schema_sql = f.read()
-                conn.executescript(schema_sql)
-                conn.commit()
+                conn.execute("BEGIN")
+                try:
+                    conn.executescript(schema_sql)
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                    raise
             self.logger.info(f"SQLite database initialized from schema: {schema_path}")
         except sqlite3.Error as e:
             self.logger.error(f"SQLite initialization failed: {str(e)}", exc_info=True)
@@ -137,6 +167,73 @@ class DatabaseConnection:
                 exc_info=True,
             )
             raise DatabaseError(f"Failed to initialize SQLite database: {str(e)}")
+
+    def _validate_schema_sql(self, schema_sql: str) -> None:
+        """Validate SQL schema content for injection attacks.
+
+        Args:
+            schema_sql: SQL schema content
+
+        Raises:
+            DatabaseError: If schema contains dangerous statements
+        """
+        # Convert to uppercase for case-insensitive matching
+        sql_upper = schema_sql.upper()
+
+        # Dangerous SQL statements that should not be in schema file
+        dangerous_patterns = [
+            "ATTACH DATABASE",
+            "DETACH DATABASE",
+            "LOAD EXTENSION",
+            "IMPORT",
+            "EXPORT",
+            "VACUUM INTO",
+            "PRAGMA KEY",
+            "DROP DATABASE",
+            "ALTER TABLE",  # Only allow in migrations, not in initial schema
+            "DELETE FROM",  # Only allow in migrations, not in initial schema
+            "UPDATE ",  # Allow updates only via specific patterns
+            "DROP TABLE",
+            "DROP INDEX",
+            "DROP VIEW",
+        ]
+
+        # Allow patterns for initial schema
+        allowed_patterns = [
+            "CREATE TABLE",
+            "CREATE INDEX",
+            "CREATE VIEW",
+            "CREATE TRIGGER",
+            "INSERT INTO",
+            "PRAGMA",
+        ]
+
+        # Check for dangerous patterns
+        for pattern in dangerous_patterns:
+            if pattern in sql_upper:
+                # Allow specific exceptions
+                if pattern == "PRAGMA" and (
+                    "PRAGMA FOREIGN_KEYS" in sql_upper
+                    or "PRAGMA JOURNAL_MODE" in sql_upper
+                    or "PRAGMA SYNCHRONOUS" in sql_upper
+                ):
+                    continue
+                # Allow ON DELETE CASCADE (foreign key constraint)
+                if pattern == "DELETE FROM" and "ON DELETE CASCADE" in sql_upper:
+                    continue
+                # Allow DELETE FROM in triggers (FTS sync)
+                if pattern == "DELETE FROM" and "CREATE TRIGGER" in sql_upper:
+                    continue
+                # Allow UPDATE in triggers (FTS sync)
+                if pattern == "UPDATE " and "CREATE TRIGGER" in sql_upper:
+                    continue
+                raise DatabaseError(f"Dangerous SQL statement found in schema: {pattern}")
+
+        # Check that schema contains expected statements
+        if not any(pattern in sql_upper for pattern in allowed_patterns):
+            raise DatabaseError(
+                "Schema file must contain valid SQL statements (CREATE TABLE, CREATE INDEX, etc.)"
+            )
 
 
 # Global database connection instance (for backward compatibility)

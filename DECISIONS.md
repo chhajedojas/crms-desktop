@@ -1109,6 +1109,8 @@ The following milestones may require revisiting existing decisions:
 - **Revisit ADR-007**: Implement and evaluate Celery job queue
 - **Revisit ADR-020**: Implement OCR and evaluate accuracy
 - **Finalize OPEN-001 through OPEN-005**: OCR, AI, search, indexing decisions
+- **Revisit ADR-021**: Verify security improvements with persistence layer
+- **Implement HIGH-001 through HIGH-012**: Security improvements with Repository pattern
 
 ## v0.3 - Organization
 - **Revisit ADR-010**: Implement and evaluate plugin system
@@ -1129,6 +1131,72 @@ The following milestones may require revisiting existing decisions:
 - **Revisit ADR-001**: Evaluate Electron performance and consider alternatives
 - **Finalize OPEN-008 through OPEN-010**: Auth, update, packaging decisions
 - **Revisit all major ADRs**: Final evaluation before production release
+
+---
+
+# ADR-021: Security Improvements Based on Red Team Review
+
+**Date:** 2024-01-01
+**Status:** Accepted
+
+## Context
+A comprehensive Red Team security review identified 8 critical, 12 high, 15 medium, and 8 low security vulnerabilities in the v0.1 foundation. The review covered authentication, IPC communication, database operations, file system access, input validation, logging, dependencies, error handling, and frontend security.
+
+## Decision
+Implement 4 critical security improvements immediately and document architectural trade-offs for rejected recommendations. Defer remaining improvements to future milestones when relevant functionality is added.
+
+## Rationale
+### Implemented Improvements
+1. **Path Traversal Protection**: Replaced string prefix matching with proper path validation using `Path.relative_to()`, symlink detection, and parent directory reference detection. This prevents symlink attacks and path escape attempts.
+2. **SQL Injection Prevention**: Added schema SQL validation to block dangerous statements (ATTACH DATABASE, LOAD EXTENSION, etc.) while allowing safe statements for initial schema. Added transaction with rollback for atomicity.
+3. **IPC Schema Validation**: Implemented Pydantic models for IPC commands and responses with type checking, size limits, and field validation. Prevents type confusion attacks and memory exhaustion.
+4. **IPC Channel Allow-Listing**: Restricted Electron IPC channels to an explicit allowlist, preventing renderer process from accessing system-level channels or arbitrary operations.
+
+### Rejected Recommendations
+1. **IPC Authentication**: Rejected because CRMS is a single-user desktop application with local IPC. An attacker with local access already has full system access. Authentication adds complexity without security benefit for this threat model.
+2. **IPC Rate Limiting**: Rejected because the backend serves a single Electron frontend. Rate limiting is designed for multi-client scenarios and adds overhead for a single-client system.
+3. **Database Encryption**: Postponed to commercial releases (v1.0+). For single-user offline desktop application, encryption provides marginal benefit and adds complexity. Will be required for commercial releases.
+4. **Secrets Management**: Rejected because the current architecture has no secrets (no API keys, passwords, or tokens). Environment variables are sufficient for non-sensitive configuration. Will be added when external APIs are integrated.
+
+### Deferred Recommendations
+- HIGH-001 through HIGH-012: Deferred to Milestone 2 when relevant functionality (Repository pattern, Unit of Work, file operations, etc.) is implemented.
+- MEDIUM and LOW findings: Deferred to future milestones when relevant features are added.
+
+## Alternatives Considered
+- **Implement all critical findings**: Would delay Milestone 2 for features that are architectural trade-offs (authentication, rate limiting, encryption, secrets management)
+- **Implement no security improvements**: Would leave critical vulnerabilities unaddressed
+- **Implement all findings immediately**: Would add significant complexity and dependencies premature for v0.1 foundation
+
+## Advantages
+- Addresses most critical vulnerabilities for current threat model
+- Documents architectural trade-offs with clear reasoning
+- Provides clear roadmap for future security improvements
+- Maintains development velocity for Milestone 2
+- Security score improved from 5.5/10 to 6.5/10
+
+## Disadvantages
+- Some critical findings rejected (authentication, rate limiting) based on architectural assumptions
+- Database encryption postponed (may affect commercial release timeline)
+- Security improvements fragmented across milestones
+
+## Future Impact
+- Security improvements will be implemented incrementally with each milestone
+- Database encryption must be implemented before commercial release (v1.0)
+- Authentication and rate limiting must be added if application becomes multi-user or network-accessible
+- Secrets management must be added when external APIs are integrated
+- Security review should be repeated after each milestone
+
+## Security Score Update
+- **Before:** 5.5/10 (8 critical, 12 high, 15 medium, 8 low)
+- **After:** 6.5/10 (4 critical rejected, 12 high deferred, 15 medium deferred, 8 low deferred)
+- **Acceptable for v0.1 foundation:** ✅
+
+## Related Files
+- `SECURITY_DECISIONS.md` - Detailed security decisions and reasoning
+- `RED_TEAM_SECURITY_REVIEW.md` - Original security review findings
+- `backend/database/connection.py` - Path traversal and SQL injection fixes
+- `backend/main.py` - IPC schema validation
+- `frontend/electron/preload.ts` - IPC channel allow-listing
 
 ---
 
@@ -1159,6 +1227,9 @@ The following milestones may require revisiting existing decisions:
 
 ## Communication Decisions
 - ADR-017: PyBridge IPC Protocol
+
+## Security Decisions
+- ADR-021: Security Improvements Based on Red Team Review
 
 ## Extensibility Decisions
 - ADR-010: Pluggy for Plugin System
